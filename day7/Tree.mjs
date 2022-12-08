@@ -35,7 +35,7 @@ class TreeNode {
     }
   }
 
-  updateTreeNodeValue () {
+  updateValue () {
     this.value = this.computeNodeValue()
     if (this.parent) {
       this.parent.updateValue(this.value)
@@ -51,7 +51,7 @@ class TreeNode {
       })
       .join('')
   
-    return `${'\t'.repeat(this.depth)}${this.name} (${this.type}, size=${this.value})${os.EOL}${childrenString}` // + os.EOL + (this.children.length ? '\t' + childrenString : '')
+    return `${'\t'.repeat(this.depth)}${this.name} (${this.type}, size=${this.value})${os.EOL}${childrenString}`
   }
 }
 
@@ -105,10 +105,6 @@ export default class Tree {
       if (node.key === key) return node
     }
     return undefined
-  }
-
-  print() {
-    this.root.print()
   }
 
   toString() {
