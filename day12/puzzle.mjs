@@ -12,7 +12,7 @@ main()
 
 async function main () {
   try {
-    const readStream = fs.createReadStream(path.resolve(__dirname, 'example.txt'), { encoding: 'utf8' })
+    const readStream = fs.createReadStream(path.resolve(__dirname, 'input.txt'), { encoding: 'utf8' })
     const fileLinesStream = readline.createInterface({ input: readStream })
 
     const grid = []
@@ -42,59 +42,53 @@ async function main () {
       index++
     }
 
-    // find the starting point
     console.log('Starting area', startingArea)
+    console.log('End area', endingArea)
 
-    // while
-    const graph = new Graph(false)
-    for (let x = 0; x < grid.length; x++) {
-      for (let y = 0; y < grid[x].length; y++) {
-        const areaValue = grid[x][y]
-        const areaKey = x + ',' + y
+    const graph = new Graph(true)
+    for (let y = 0; y < grid.length; y++) {
+      for (let x = 0; x < grid[y].length; x++) {
+        let areaValue = grid[y][x]
+        const areaKey = pointToKey([x, y])
+
+        if (areaValue === 'S') { areaValue = 'a' }
+        else if (areaValue === 'E') { areaValue = 'z' }
   
         if (!graph.findNode(areaKey)) {
           graph.addNode(areaKey, areaValue)
         }
 
         const surroundingAreas = getSurroundingPositions([x, y]).map(p => {
-          const adjacentArea = grid?.[p[0]]?.[p[1]]
-          return [p, adjacentArea]
-        }).filter(area => {
-          return !!area[1]
+          const adjacentArea = grid?.[p[1]]?.[p[0]]
+          let area = adjacentArea
+          if (adjacentArea === 'S') { area = 'a' }
+          if (adjacentArea === 'E') { area = 'z' }
+          return { point: p, area }
+        }).filter(adj => {
+          return !!adj.area
         })
 
         surroundingAreas.forEach(adjArea => {
-          const [adjAreaPoint, adjAreaValue] = adjArea
+          const { point: adjAreaPoint, area: adjAreaValue } = adjArea
 
-          if (!graph.findNode(adjAreaPoint)) {
-            graph.addNode(adjAreaPoint.toString(), adjAreaValue)
+          if (!graph.findNode(pointToKey(adjAreaPoint))) {
+            graph.addNode(pointToKey(adjAreaPoint), adjAreaValue)
           }
 
-          if (!graph.hasEdge(areaKey, adjAreaPoint)) {
-            if (areaValue === 'S') {
-              graph.addEdge(areaKey, adjArea, 1)
-            } else if (adjAreaPoint === 'E' && areaValue.codePointAt(0) === 122) {
-              graph.addEdge(areaKey, adjArea, 1)
-            } else if (adjAreaValue.codePointAt(0) - areaValue.codePointAt(0) === 1) {
-              graph.addEdge(areaKey, adjArea, 1)
+          const hasEdge = graph.hasEdge(areaKey, pointToKey(adjAreaPoint))
+
+          if (!hasEdge) {
+            const heightDiff = adjAreaValue.codePointAt(0) - areaValue.codePointAt(0)
+            if (heightDiff <= 1) {
+              graph.addEdge(areaKey, pointToKey(adjAreaPoint), 1)
             }
           }
         })
-        
-        console.log(surroundingAreas)
       }
     }
 
-    // build the graph
-    console.log(graph)
-
-    // bfs
-    // get the tree
-    
-    // find the end point
-    console.log('End area', endingArea)
-
-    
+    const result = shortestPathBfs(graph, pointToKey(startingArea), pointToKey(endingArea))
+    console.log(result)
   } catch (err) {
     console.error(err)
   }
@@ -102,9 +96,38 @@ async function main () {
 
 function getSurroundingPositions(pos) {
   return [
-    [pos[0], pos[1] + 1], // Top
+    [pos[0], pos[1] - 1], // Top
     [pos[0] + 1, pos[1]], // Right
-    [pos[0], pos[1] - 1], // Bottom
+    [pos[0], pos[1] + 1], // Bottom
     [pos[0] - 1, pos[1]] // Left
   ]
+}
+
+function pointToKey (point) {
+  return `${point[0]}-${point[1]}`
+}
+
+const shortestPathBfs = (graph, startNode, stopNode) => {
+  const previous = new Map()
+  const visited = new Set()
+  const queue = []
+  queue.push({ node: startNode, dist: 0 })
+  visited.add(startNode)
+
+  while (queue.length > 0) {
+    const { node, dist } = queue.shift()
+    if (node === stopNode) {
+      return { shortestDistance: dist, previous }
+    }
+
+    const adjacencyList = graph.adjacent(node)
+    for (let neighbour of adjacencyList) {
+      if (!visited.has(neighbour)) {
+        previous.set(neighbour, node)
+        queue.push({ node: neighbour, dist: dist + 1 })
+        visited.add(neighbour)
+      }
+    }
+  }
+  return { shortestDistance: -1, previous }
 }

@@ -32,6 +32,9 @@ export default class Graph {
   }
 
   hasEdge(a, b) {
+    if (!this.directed) {
+      return this.edges.has(JSON.stringify([a, b])) || this.edges.has(JSON.stringify([b, a])) 
+    }
     return this.edges.has(JSON.stringify([a, b]));
   }
 
